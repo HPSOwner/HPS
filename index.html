@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Arms Dealer — Inspection Bay</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #05070a; font-family: 'Courier New', monospace; }
+  #app { position: relative; width: 100vw; height: 100vh; }
+  canvas { display: block; }
+
+  #hud {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 18px 24px;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .hud-panel {
+    background: rgba(8, 14, 20, 0.72);
+    border: 1px solid rgba(90, 160, 200, 0.35);
+    padding: 10px 16px;
+    color: #9fd6ff;
+    letter-spacing: 1px;
+    font-size: 12px;
+    text-transform: uppercase;
+    backdrop-filter: blur(2px);
+  }
+  .hud-panel .title { color: #e8f6ff; font-size: 14px; font-weight: bold; }
+  .hud-panel .sub { color: #5c8aa8; margin-top: 2px; }
+
+  #controls {
+    position: absolute;
+    bottom: 28px; left: 0; right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    z-index: 10;
+  }
+  button.action-btn {
+    pointer-events: auto;
+    background: rgba(10, 18, 26, 0.85);
+    border: 1px solid rgba(90, 170, 220, 0.5);
+    color: #bfe6ff;
+    padding: 12px 22px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  button.action-btn:hover {
+    background: rgba(40, 110, 160, 0.35);
+    border-color: #7fd0ff;
+    box-shadow: 0 0 14px rgba(80, 180, 255, 0.4);
+  }
+  button.action-btn.active {
+    background: rgba(40, 150, 220, 0.5);
+    border-color: #a8e8ff;
+    color: #fff;
+    box-shadow: 0 0 18px rgba(100, 200, 255, 0.6);
+  }
+
+  #crosshair-label {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: rgba(159, 214, 255, 0.4);
+    font-size: 11px;
+    letter-spacing: 2px;
+    pointer-events: none;
+    text-transform: uppercase;
+  }
+
+  #loading {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #05070a;
+    color: #5c8aa8;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-size: 13px;
+    z-index: 100;
+  }
+
+  #weapon-select {
+    position: absolute;
+    top: 80px; left: 0; right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    z-index: 10;
+  }
+  button.weapon-btn {
+    pointer-events: auto;
+    background: rgba(10, 18, 26, 0.7);
+    border: 1px solid rgba(90, 170, 220, 0.3);
+    color: #7fa8c2;
+    padding: 8px 18px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  button.weapon-btn:hover {
+    border-color: #7fd0ff;
+    color: #bfe6ff;
+  }
+  button.weapon-btn.active {
+    background: rgba(40, 150, 220, 0.4);
+    border-color: #a8e8ff;
+    color: #fff;
+  }
+  button.weapon-btn:disabled {
+    opacity: 0.4;
+    cursor: wait;
+  }
+  button.action-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  button.action-btn:disabled:hover {
+    background: rgba(10, 18, 26, 0.85);
+    border-color: rgba(90, 170, 220, 0.5);
+    box-shadow: none;
+  }
+
+  #case-credit {
+    position: absolute;
+    bottom: 6px; left: 0; right: 0;
+    text-align: center;
+    color: rgba(127, 168, 194, 0.5);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  #blueprint-panel {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(820px, 94vw);
+    background: #0a1826;
+    border: 1px solid rgba(90, 170, 220, 0.4);
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(60, 130, 180, 0.15) inset;
+    z-index: 50;
+    display: none;
+    pointer-events: auto;
+  }
+  #blueprint-panel.visible { display: block; }
+  #blueprint-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 18px;
+    border-bottom: 1px solid rgba(90, 170, 220, 0.3);
+    color: #9fd6ff;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  #blueprint-close {
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    color: #7fa8c2;
+  }
+  #blueprint-close:hover { color: #fff; }
+  #blueprint-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 10px 18px 0;
+  }
+  .blueprint-tab {
+    pointer-events: auto;
+    background: rgba(10, 18, 26, 0.6);
+    border: 1px solid rgba(90, 170, 220, 0.3);
+    color: #7fa8c2;
+    padding: 6px 14px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .blueprint-tab.active {
+    background: rgba(40, 150, 220, 0.35);
+    border-color: #a8e8ff;
+    color: #fff;
+  }
+  #blueprint-reference {
+    display: none;
+    padding: 14px 18px;
+    text-align: center;
+  }
+  #blueprint-reference.visible { display: block; }
+  #blueprint-reference img {
+    max-width: 100%;
+    max-height: 60vh;
+    background: #fff;
+    border: 1px solid rgba(90, 170, 220, 0.3);
+  }
+  #blueprint-reference .citation {
+    margin-top: 8px;
+    color: #5c8aa8;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  #blueprint-3d-wrap {
+    position: relative;
+    padding: 14px 18px 8px;
+  }
+  #blueprint-3d-wrap.hidden { display: none; }
+  #blueprint-canvas {
+    width: 100%;
+    height: 50vh;
+    min-height: 320px;
+    display: block;
+    cursor: pointer;
+    border: 1px solid rgba(90, 170, 220, 0.3);
+  }
+  #blueprint-3d-hint {
+    margin-top: 6px;
+    color: #5c8aa8;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  #blueprint-part-popup {
+    position: absolute;
+    display: none;
+    background: rgba(8, 20, 36, 0.96);
+    border: 1px solid #a8e8ff;
+    box-shadow: 0 0 20px rgba(80, 180, 255, 0.35);
+    padding: 10px 14px;
+    min-width: 200px;
+    font-size: 11px;
+    color: #cfeaff;
+    letter-spacing: 0.5px;
+    z-index: 60;
+    pointer-events: none;
+  }
+  #blueprint-part-popup.visible { display: block; }
+  #blueprint-part-popup .part-name {
+    color: #fff;
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  #blueprint-part-popup .part-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    color: #7fa8c2;
+    text-transform: uppercase;
+  }
+  #blueprint-part-popup .part-row span:last-child {
+    color: #bfe6ff;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="loading">Loading Inspection Bay…</div>
+  <div id="hud">
+    <div class="hud-panel" style="text-align:right; margin-left:auto;">
+      <div class="title">INSPECTION BAY</div>
+      <div class="sub">WAREHOUSE 04 — SECTOR B</div>
+    </div>
+  </div>
+  <div id="weapon-select">
+    <button class="weapon-btn active" id="btn-weapon-glock19" data-weapon="glock19">Glock 19</button>
+    <button class="weapon-btn" id="btn-weapon-mp5" data-weapon="mp5">MP5</button>
+  </div>
+  <div id="controls">
+    <button class="action-btn" id="btn-unpack">Lift From Case</button>
+    <button class="action-btn" id="btn-hologram">Hologram Scan</button>
+    <button class="action-btn" id="btn-takedown">Disassemble</button>
+    <button class="action-btn" id="btn-blueprint">Blueprint</button>
+  </div>
+  <div id="case-credit">CASE: Foxx Assets &middot; <span id="weapon-credit-footer"></span> (CC BY 4.0)</div>
+
+  <div id="blueprint-panel">
+    <div id="blueprint-header">
+      <span id="blueprint-title">SCHEMATIC</span>
+      <span id="blueprint-close">&times;</span>
+    </div>
+    <div id="blueprint-tabs">
+      <button class="blueprint-tab active" data-tab="3d">3D Blueprint</button>
+      <button class="blueprint-tab" data-tab="reference">Official Patent Reference</button>
+    </div>
+    <div id="blueprint-3d-wrap">
+      <canvas id="blueprint-canvas"></canvas>
+      <div id="blueprint-3d-hint">Click any part for details</div>
+      <div id="blueprint-part-popup">
+        <div class="part-name" id="bp-part-name"></div>
+        <div class="part-row"><span>Serial</span><span id="bp-part-serial"></span></div>
+        <div class="part-row"><span>Date Made</span><span id="bp-part-date"></span></div>
+        <div class="part-row"><span>Patent</span><span id="bp-part-patent"></span></div>
+      </div>
+    </div>
+    <div id="blueprint-reference">
+      <img id="blueprint-reference-img" src="" alt="Official patent diagram" />
+      <div class="citation" id="blueprint-reference-citation"></div>
+    </div>
+  </div>
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
